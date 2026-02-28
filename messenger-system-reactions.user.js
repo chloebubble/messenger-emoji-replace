@@ -3,7 +3,8 @@
 // @namespace    https://messenger.com/
 // @version      1.0.0
 // @description  Replace Facebook-style Messenger reaction icons with system emoji glyphs.
-// @author       Chloe Bubbles + Codex
+// @author       Chloe Bubbles
+// @license		 MIT
 // @match        https://www.messenger.com/*
 // @run-at       document-idle
 // @grant        none
