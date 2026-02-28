@@ -47,19 +47,38 @@
     return null;
   }
 
-  function makeEmojiSpan(emoji) {
+  function getPreferredSizePx(el) {
+    if (!el || !(el instanceof Element)) return 20;
+
+    const computed = window.getComputedStyle(el);
+    const candidates = [
+      el.getBoundingClientRect().width,
+      el.getBoundingClientRect().height,
+      parseFloat(computed.width),
+      parseFloat(computed.height),
+      parseFloat(computed.fontSize),
+      Number(el.getAttribute("width")),
+      Number(el.getAttribute("height")),
+    ].filter((v) => Number.isFinite(v) && v > 0);
+
+    if (candidates.length === 0) return 20;
+    return Math.max(...candidates);
+  }
+
+  function makeEmojiSpan(emoji, sizePx = 20) {
     const span = document.createElement("span");
     span.textContent = emoji;
     span.setAttribute(DONE_ATTR, "1");
     span.style.display = "inline-flex";
+    span.style.flex = "none";
     span.style.alignItems = "center";
     span.style.justifyContent = "center";
     span.style.fontFamily =
       '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
-    span.style.fontSize = "1em";
+    span.style.fontSize = `${sizePx}px`;
     span.style.lineHeight = "1";
-    span.style.width = "1.2em";
-    span.style.height = "1.2em";
+    span.style.width = `${sizePx}px`;
+    span.style.height = `${sizePx}px`;
     span.style.verticalAlign = "middle";
     // Messenger frequently dims icon containers in list/status rows.
     // Force full-color rendering for system emoji glyphs.
@@ -88,7 +107,7 @@
     const emoji = mapLabelToEmoji(label);
     if (!emoji) return;
 
-    const span = makeEmojiSpan(emoji);
+    const span = makeEmojiSpan(emoji, getPreferredSizePx(img));
     if (img.parentElement) {
       img.parentElement.replaceChild(span, img);
     }
@@ -104,7 +123,7 @@
     // Prefer replacing an icon image inside the control first.
     const iconImg = el.querySelector("img[alt], img[aria-label], img[title]");
     if (iconImg) {
-      const span = makeEmojiSpan(emoji);
+      const span = makeEmojiSpan(emoji, getPreferredSizePx(iconImg));
       iconImg.replaceWith(span);
       el.setAttribute(DONE_ATTR, "1");
       return;
