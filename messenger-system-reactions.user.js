@@ -6,6 +6,7 @@
 // @author       Chloe Bubbles
 // @license		 MIT
 // @match        https://www.messenger.com/*
+// @match        https://www.facebook.com/messages/*
 // @run-at       document-idle
 // @grant        none
 // ==/UserScript==
