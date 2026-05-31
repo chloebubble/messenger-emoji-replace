@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Messenger System Reactions (macOS)
 // @namespace    https://messenger.com/
-// @version      1.2.0
+// @version      1.2.1
 // @description  Replace Facebook-style Messenger reaction icons with system emoji glyphs.
 // @author       Chloe Bubbles
 // @license		 MIT
@@ -53,11 +53,21 @@
       if (label === name || label.includes(name)) return emoji;
     }
 
-    // If alt/title already contains an emoji, use only that glyph.
-    const emojiMatch = rawLabel.trim().match(/\p{Extended_Pictographic}\u{FE0F}?/u);
-    if (emojiMatch) return emojiMatch[0];
+    const emoji = extractReactionEmoji(rawLabel);
+    if (emoji) return emoji;
 
     return null;
+  }
+
+  function extractReactionEmoji(rawLabel) {
+    const trimmedLabel = rawLabel.trim();
+    const emojiMatch = trimmedLabel.match(/\p{Extended_Pictographic}\u{FE0F}?/u);
+    if (!emojiMatch) return null;
+
+    const label = normalizeLabel(trimmedLabel);
+    const isOnlyEmoji = label === normalizeLabel(emojiMatch[0]);
+    const isReactionLabel = /\b(reacted|reaction|reactions)\b/.test(label);
+    return isOnlyEmoji || isReactionLabel ? emojiMatch[0] : null;
   }
 
   function getPreferredSizePx(el) {
@@ -221,20 +231,7 @@
     const controlLabel = control && control !== img ? findLabel(control) : "";
     if (mapLabelToEmoji(controlLabel)) return controlLabel;
 
-    const ancestorLabel = findAncestorLabel(img);
-    if (mapLabelToEmoji(ancestorLabel)) return ancestorLabel;
-
     return findLabel(img);
-  }
-
-  function findAncestorLabel(el) {
-    let ancestor = el.parentElement;
-    for (let depth = 0; ancestor && depth < 4; depth += 1) {
-      const label = findLabel(ancestor);
-      if (label) return label;
-      ancestor = ancestor.parentElement;
-    }
-    return "";
   }
 
   function getDecorationSizePx(source, span) {
