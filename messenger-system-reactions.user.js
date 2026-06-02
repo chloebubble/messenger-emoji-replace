@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Messenger System Reactions (macOS)
 // @namespace    https://messenger.com/
-// @version      1.2.2
+// @version      1.2.3
 // @description  Replace Facebook-style Messenger reaction icons with system emoji glyphs.
 // @author       Chloe Bubbles
 // @license		 MIT
@@ -49,12 +49,12 @@
     const label = normalizeLabel(rawLabel);
     if (!label) return null;
 
+    const emoji = extractReactionEmoji(rawLabel);
+    if (emoji) return emoji;
+
     for (const [name, emoji] of REACTIONS) {
       if (label === name || label.includes(name)) return emoji;
     }
-
-    const emoji = extractReactionEmoji(rawLabel);
-    if (emoji) return emoji;
 
     return null;
   }
