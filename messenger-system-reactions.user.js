@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Messenger System Reactions (macOS)
 // @namespace    https://messenger.com/
-// @version      1.2.8
+// @version      1.2.9
 // @description  Replace Facebook-style Messenger reaction icons with system emoji glyphs.
 // @author       Chloe Bubbles
 // @license		 MIT
@@ -170,6 +170,28 @@
       }
       container = container.parentElement;
     }
+
+    const controlRect = control.getBoundingClientRect();
+    const composerInputs = document.querySelectorAll(
+      '[contenteditable="true"], textarea, input[type="text"]'
+    );
+    for (const input of composerInputs) {
+      const inputRect = input.getBoundingClientRect();
+      if (inputRect.width <= 0 || inputRect.height <= 0) continue;
+
+      const horizontalGap = Math.max(
+        inputRect.left - controlRect.right,
+        controlRect.left - inputRect.right,
+        0
+      );
+      const verticalGap = Math.max(
+        inputRect.top - controlRect.bottom,
+        controlRect.top - inputRect.bottom,
+        0
+      );
+      if (horizontalGap <= 96 && verticalGap <= 24) return true;
+    }
+
     return false;
   }
 
