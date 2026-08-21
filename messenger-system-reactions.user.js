@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Messenger System Reactions (macOS)
 // @namespace    https://messenger.com/
-// @version      1.2.9
+// @version      1.2.10
 // @description  Replace Facebook-style Messenger reaction icons with system emoji glyphs.
 // @author       Chloe Bubbles
 // @license		 MIT
@@ -68,8 +68,11 @@
     const label = normalizeLabel(trimmedLabel);
     const emoji = emojiMatches[0][0];
     const isOnlyEmoji = label === normalizeLabel(emoji);
-    const isReactionLabel = /\b(reacted|reaction|reactions)\b/.test(label);
-    return isOnlyEmoji || isReactionLabel ? emoji : null;
+    const isMessageReactionLabel = /\b(reacted|reaction|reactions)\b/.test(label);
+    const isQuickSendLabel = /\bsend(?: a)?\b/.test(label);
+    return isOnlyEmoji || isMessageReactionLabel || isQuickSendLabel
+      ? emoji
+      : null;
   }
 
   function getPreferredSizePx(el) {
@@ -147,54 +150,6 @@
     return el.closest(CONTROL_SELECTOR);
   }
 
-  function isProtectedQuickReactionControl(el, label) {
-    const control = findControl(el);
-    if (isNearComposerInput(control || el)) return true;
-    if (!control) return false;
-
-    const controlLabel = normalizeLabel(findLabel(control));
-    const sourceLabel = normalizeLabel(label);
-    const combinedLabel = `${controlLabel} ${sourceLabel}`.trim();
-    return /\b(send|quick reaction|quick react)\b/.test(combinedLabel);
-  }
-
-  function isNearComposerInput(control) {
-    let container = control.parentElement;
-    for (let depth = 0; container && depth < 5; depth += 1) {
-      if (
-        container.querySelector(
-          '[contenteditable="true"], textarea, input[type="text"]'
-        )
-      ) {
-        return true;
-      }
-      container = container.parentElement;
-    }
-
-    const controlRect = control.getBoundingClientRect();
-    const composerInputs = document.querySelectorAll(
-      '[contenteditable="true"], textarea, input[type="text"]'
-    );
-    for (const input of composerInputs) {
-      const inputRect = input.getBoundingClientRect();
-      if (inputRect.width <= 0 || inputRect.height <= 0) continue;
-
-      const horizontalGap = Math.max(
-        inputRect.left - controlRect.right,
-        controlRect.left - inputRect.right,
-        0
-      );
-      const verticalGap = Math.max(
-        inputRect.top - controlRect.bottom,
-        controlRect.top - inputRect.bottom,
-        0
-      );
-      if (horizontalGap <= 96 && verticalGap <= 24) return true;
-    }
-
-    return false;
-  }
-
   function hideSource(el) {
     if (!el.hasAttribute(HIDDEN_SOURCE_ATTR)) {
       el.setAttribute(ORIGINAL_DISPLAY_ATTR, el.style.display || "");
@@ -245,11 +200,18 @@
   function findBestImageLabel(img, labelOverride = null) {
     if (labelOverride) return labelOverride;
 
+    const control = findControl(img);
+    const controlLabel = control && control !== img ? findLabel(control) : "";
+    if (
+      /\bsend(?: a)?\b/.test(normalizeLabel(controlLabel)) &&
+      mapLabelToEmoji(controlLabel)
+    ) {
+      return controlLabel;
+    }
+
     const imageLabel = findLabel(img);
     if (mapLabelToEmoji(imageLabel)) return imageLabel;
 
-    const control = findControl(img);
-    const controlLabel = control && control !== img ? findLabel(control) : "";
     if (mapLabelToEmoji(controlLabel)) return controlLabel;
 
     return imageLabel;
@@ -271,7 +233,7 @@
   function decorateImageReaction(img, labelOverride = null) {
     const effectiveLabel = findBestImageLabel(img, labelOverride);
     const emoji = mapLabelToEmoji(effectiveLabel);
-    if (!emoji || isProtectedQuickReactionControl(img, effectiveLabel)) {
+    if (!emoji) {
       removeImageDecoration(img);
       return;
     }
