@@ -254,6 +254,8 @@
   }
 
   function decorateQuickSend(img, control, emoji, label) {
+    // The nested image wrapper clips replacement siblings. Mount the emoji on
+    // the semantic quick-send button and use the button as the layout boundary.
     removeImageDecoration(img);
     prepareQuickSendControl(control);
 
@@ -273,6 +275,8 @@
 
     const control = findControl(img);
     const controlLabel = control && control !== img ? findLabel(control) : "";
+    // The quick-send image can describe a different emoji. Its button label is
+    // authoritative because it contains the current `Send a <emoji>` value.
     if (
       isQuickSendLabel(controlLabel) &&
       mapLabelToEmoji(controlLabel)
