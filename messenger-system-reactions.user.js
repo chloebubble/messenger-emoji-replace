@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Messenger System Reactions (macOS)
 // @namespace    https://messenger.com/
-// @version      1.2.4
+// @version      1.2.5
 // @description  Replace Facebook-style Messenger reaction icons with system emoji glyphs.
 // @author       Chloe Bubbles
 // @license		 MIT
@@ -77,18 +77,20 @@
     if (!el || !(el instanceof Element)) return 20;
 
     const computed = window.getComputedStyle(el);
-    const candidates = [
-      el.getBoundingClientRect().width,
-      el.getBoundingClientRect().height,
-      parseFloat(computed.width),
-      parseFloat(computed.height),
-      parseFloat(computed.fontSize),
-      Number(el.getAttribute("width")),
-      Number(el.getAttribute("height")),
-    ].filter((v) => Number.isFinite(v) && v > 0);
+    const rect = el.getBoundingClientRect();
+    const sizeGroups = [
+      [rect.width, rect.height],
+      [parseFloat(computed.width), parseFloat(computed.height)],
+      [Number(el.getAttribute("width")), Number(el.getAttribute("height"))],
+      [parseFloat(computed.fontSize)],
+    ];
 
-    if (candidates.length === 0) return 20;
-    return Math.max(...candidates);
+    for (const group of sizeGroups) {
+      const sizes = group.filter((value) => Number.isFinite(value) && value > 0);
+      if (sizes.length > 0) return Math.min(...sizes);
+    }
+
+    return 20;
   }
 
   function applyEmojiSpanStyles(span, sizePx = 20) {
