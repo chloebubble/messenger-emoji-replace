@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Messenger System Reactions (macOS)
 // @namespace    https://messenger.com/
-// @version      1.2.12
+// @version      1.2.13
 // @description  Replace Facebook-style Messenger reaction icons with system emoji glyphs.
 // @author       Chloe Bubbles
 // @license		 MIT
@@ -33,6 +33,7 @@
   const SIZE_ATTR = "data-vm-system-reaction-size";
   const HIDDEN_SOURCE_ATTR = "data-vm-system-reaction-hidden-source";
   const ORIGINAL_DISPLAY_ATTR = "data-vm-system-reaction-original-display";
+  const ORIGINAL_POSITION_ATTR = "data-vm-system-reaction-original-position";
   const IMAGE_KIND = "image";
   const CONTROL_KIND = "control";
   const QUICK_SEND_SIZE_PX = 20;
@@ -208,6 +209,65 @@
     restoreSource(img);
   }
 
+  function findControlEmojiSpan(control) {
+    return Array.from(control.children).find(
+      (child) =>
+        child.hasAttribute(DONE_ATTR) &&
+        child.getAttribute(KIND_ATTR) === CONTROL_KIND
+    );
+  }
+
+  function ensureControlEmojiSpan(control) {
+    const existingSpan = findControlEmojiSpan(control);
+    if (existingSpan) return existingSpan;
+
+    const span = makeEmojiSpan(CONTROL_KIND);
+    control.append(span);
+    return span;
+  }
+
+  function prepareQuickSendControl(control) {
+    if (window.getComputedStyle(control).position !== "static") return;
+
+    if (!control.hasAttribute(ORIGINAL_POSITION_ATTR)) {
+      control.setAttribute(ORIGINAL_POSITION_ATTR, control.style.position || "");
+    }
+    control.style.setProperty("position", "relative", "important");
+  }
+
+  function restoreQuickSendControl(control) {
+    if (!control.hasAttribute(ORIGINAL_POSITION_ATTR)) return;
+
+    const originalPosition = control.getAttribute(ORIGINAL_POSITION_ATTR);
+    if (originalPosition) {
+      control.style.position = originalPosition;
+    } else {
+      control.style.removeProperty("position");
+    }
+    control.removeAttribute(ORIGINAL_POSITION_ATTR);
+  }
+
+  function removeControlDecoration(span) {
+    const control = span.parentElement;
+    span.remove();
+    if (control instanceof Element) restoreQuickSendControl(control);
+  }
+
+  function decorateQuickSend(img, control, emoji, label) {
+    removeImageDecoration(img);
+    prepareQuickSendControl(control);
+
+    const span = ensureControlEmojiSpan(control);
+    span.vmSystemReactionSource = img;
+    updateEmojiSpan(span, emoji, label, QUICK_SEND_SIZE_PX);
+    span.style.setProperty("position", "absolute", "important");
+    span.style.setProperty("inset", "0", "important");
+    span.style.setProperty("margin", "auto", "important");
+    span.style.setProperty("padding", "0", "important");
+    span.style.setProperty("pointer-events", "none", "important");
+    hideSource(img);
+  }
+
   function findBestImageLabel(img, labelOverride = null) {
     if (labelOverride) return labelOverride;
 
@@ -251,6 +311,12 @@
       return;
     }
 
+    const control = findControl(img);
+    if (control && isQuickSendLabel(effectiveLabel)) {
+      decorateQuickSend(img, control, emoji, effectiveLabel);
+      return;
+    }
+
     const span = ensureImageEmojiSpan(img);
     updateEmojiSpan(
       span,
@@ -274,7 +340,12 @@
     }
 
     if (kind === CONTROL_KIND) {
-      span.remove();
+      const source = span.vmSystemReactionSource;
+      if (source instanceof HTMLImageElement && source.isConnected) {
+        decorateImageReaction(source);
+      } else {
+        removeControlDecoration(span);
+      }
     }
   }
 
