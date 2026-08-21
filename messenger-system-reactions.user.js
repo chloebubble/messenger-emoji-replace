@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Messenger System Reactions (macOS)
 // @namespace    https://messenger.com/
-// @version      1.2.10
+// @version      1.2.11
 // @description  Replace Facebook-style Messenger reaction icons with system emoji glyphs.
 // @author       Chloe Bubbles
 // @license		 MIT
@@ -35,6 +35,7 @@
   const ORIGINAL_DISPLAY_ATTR = "data-vm-system-reaction-original-display";
   const IMAGE_KIND = "image";
   const CONTROL_KIND = "control";
+  const QUICK_SEND_SIZE_PX = 20;
   const CONTROL_SELECTOR = 'button, [role="button"], a[href]';
 
   function normalizeLabel(value) {
@@ -58,6 +59,10 @@
     return null;
   }
 
+  function isQuickSendLabel(rawLabel) {
+    return /\bsend(?: a)?\b/.test(normalizeLabel(rawLabel));
+  }
+
   function extractReactionEmoji(rawLabel) {
     const trimmedLabel = rawLabel.trim();
     const emojiMatches = [
@@ -69,8 +74,7 @@
     const emoji = emojiMatches[0][0];
     const isOnlyEmoji = label === normalizeLabel(emoji);
     const isMessageReactionLabel = /\b(reacted|reaction|reactions)\b/.test(label);
-    const isQuickSendLabel = /\bsend(?: a)?\b/.test(label);
-    return isOnlyEmoji || isMessageReactionLabel || isQuickSendLabel
+    return isOnlyEmoji || isMessageReactionLabel || isQuickSendLabel(label)
       ? emoji
       : null;
   }
@@ -203,7 +207,7 @@
     const control = findControl(img);
     const controlLabel = control && control !== img ? findLabel(control) : "";
     if (
-      /\bsend(?: a)?\b/.test(normalizeLabel(controlLabel)) &&
+      isQuickSendLabel(controlLabel) &&
       mapLabelToEmoji(controlLabel)
     ) {
       return controlLabel;
@@ -217,7 +221,9 @@
     return imageLabel;
   }
 
-  function getDecorationSizePx(source, span) {
+  function getDecorationSizePx(source, span, label) {
+    if (isQuickSendLabel(label)) return QUICK_SEND_SIZE_PX;
+
     const storedSize = Number(span?.getAttribute(SIZE_ATTR));
     if (
       source.hasAttribute(HIDDEN_SOURCE_ATTR) &&
@@ -239,7 +245,12 @@
     }
 
     const span = ensureImageEmojiSpan(img);
-    updateEmojiSpan(span, emoji, effectiveLabel, getDecorationSizePx(img, span));
+    updateEmojiSpan(
+      span,
+      emoji,
+      effectiveLabel,
+      getDecorationSizePx(img, span, effectiveLabel)
+    );
     hideSource(img);
   }
 
