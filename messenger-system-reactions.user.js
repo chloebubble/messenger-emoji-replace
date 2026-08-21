@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Messenger System Reactions (macOS)
 // @namespace    https://messenger.com/
-// @version      1.2.11
+// @version      1.2.12
 // @description  Replace Facebook-style Messenger reaction icons with system emoji glyphs.
 // @author       Chloe Bubbles
 // @license		 MIT
@@ -100,17 +100,24 @@
   }
 
   function applyEmojiSpanStyles(span, sizePx = 20) {
-    span.style.display = "inline-flex";
-    span.style.flex = "none";
-    span.style.alignItems = "center";
-    span.style.justifyContent = "center";
-    span.style.fontFamily =
-      '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
-    span.style.fontSize = `${sizePx}px`;
-    span.style.lineHeight = "1";
-    span.style.width = `${sizePx}px`;
-    span.style.height = `${sizePx}px`;
-    span.style.verticalAlign = "middle";
+    span.style.setProperty("display", "inline-flex", "important");
+    span.style.setProperty("flex", "none", "important");
+    span.style.setProperty("align-items", "center", "important");
+    span.style.setProperty("justify-content", "center", "important");
+    span.style.setProperty(
+      "font-family",
+      '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif',
+      "important"
+    );
+    span.style.setProperty("font-size", `${sizePx}px`, "important");
+    span.style.setProperty("line-height", "1", "important");
+    span.style.setProperty("width", `${sizePx}px`, "important");
+    span.style.setProperty("height", `${sizePx}px`, "important");
+    span.style.setProperty("max-width", `${sizePx}px`, "important");
+    span.style.setProperty("max-height", `${sizePx}px`, "important");
+    span.style.setProperty("vertical-align", "middle", "important");
+    span.style.setProperty("transform", "none", "important");
+    span.style.setProperty("scale", "1", "important");
     // Messenger frequently dims icon containers in list/status rows.
     // Force full-color rendering for system emoji glyphs.
     span.style.setProperty("opacity", "1", "important");
