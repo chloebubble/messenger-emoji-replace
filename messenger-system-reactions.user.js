@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Messenger System Reactions (macOS)
 // @namespace    https://messenger.com/
-// @version      1.2.5
+// @version      1.2.7
 // @description  Replace Facebook-style Messenger reaction icons with system emoji glyphs.
 // @author       Chloe Bubbles
 // @license		 MIT
@@ -35,7 +35,6 @@
   const ORIGINAL_DISPLAY_ATTR = "data-vm-system-reaction-original-display";
   const IMAGE_KIND = "image";
   const CONTROL_KIND = "control";
-  const THUMBS_UP_EMOJI = "\u{1F44D}";
   const CONTROL_SELECTOR = 'button, [role="button"], a[href]';
 
   function normalizeLabel(value) {
@@ -79,8 +78,8 @@
     const computed = window.getComputedStyle(el);
     const rect = el.getBoundingClientRect();
     const sizeGroups = [
-      [rect.width, rect.height],
       [parseFloat(computed.width), parseFloat(computed.height)],
+      [rect.width, rect.height],
       [Number(el.getAttribute("width")), Number(el.getAttribute("height"))],
       [parseFloat(computed.fontSize)],
     ];
@@ -148,9 +147,7 @@
     return el.closest(CONTROL_SELECTOR);
   }
 
-  function isProtectedQuickLikeControl(el, emoji, label) {
-    if (emoji !== THUMBS_UP_EMOJI) return false;
-
+  function isProtectedQuickReactionControl(el, label) {
     const control = findControl(el);
     if (!control) return false;
 
@@ -161,9 +158,8 @@
       /^(like|thumbs up)$/.test(value)
     );
     return (
-      /\b(like|thumbs up)\b/.test(combinedLabel) &&
-      (/\b(send|quick reaction|quick react)\b/.test(combinedLabel) ||
-        (isBareLikeLabel && isNearComposerInput(control)))
+      /\b(send|quick reaction|quick react)\b/.test(combinedLabel) ||
+      (isBareLikeLabel && isNearComposerInput(control))
     );
   }
 
@@ -258,7 +254,7 @@
   function decorateImageReaction(img, labelOverride = null) {
     const effectiveLabel = findBestImageLabel(img, labelOverride);
     const emoji = mapLabelToEmoji(effectiveLabel);
-    if (!emoji || isProtectedQuickLikeControl(img, emoji, effectiveLabel)) {
+    if (!emoji || isProtectedQuickReactionControl(img, effectiveLabel)) {
       removeImageDecoration(img);
       return;
     }
