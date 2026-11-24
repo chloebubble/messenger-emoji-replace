@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Messenger System Reactions (macOS)
 // @namespace    https://messenger.com/
-// @version      1.2.13
+// @version      1.2.14
 // @description  Replace Facebook-style Messenger reaction icons with system emoji glyphs.
 // @author       Chloe Bubbles
 // @license		 MIT
@@ -61,14 +61,18 @@
   }
 
   function isQuickSendLabel(rawLabel) {
-    return /\bsend(?: a)?\b/.test(normalizeLabel(rawLabel));
+    // Messenger labels this control `Send a <emoji>`. Match only the label
+    // start, so that other labels that contain "send" do not match.
+    return /^send\b/.test(normalizeLabel(rawLabel));
   }
+
+  // Match full emoji sequences first: skin tones, ZWJ sequences, flags, and
+  // keycaps. Then match single pictographs that are not RGI sequences.
+  const EMOJI_PATTERN = /\p{RGI_Emoji}|\p{Extended_Pictographic}\u{FE0F}?/gv;
 
   function extractReactionEmoji(rawLabel) {
     const trimmedLabel = rawLabel.trim();
-    const emojiMatches = [
-      ...trimmedLabel.matchAll(/\p{Extended_Pictographic}\u{FE0F}?/gu),
-    ];
+    const emojiMatches = [...trimmedLabel.matchAll(EMOJI_PATTERN)];
     if (emojiMatches.length !== 1) return null;
 
     const label = normalizeLabel(trimmedLabel);
@@ -253,6 +257,14 @@
     if (control instanceof Element) restoreQuickSendControl(control);
   }
 
+  function removeQuickSendDecoration(img) {
+    const control = findControl(img);
+    const span = control && findControlEmojiSpan(control);
+    if (span && span.vmSystemReactionSource === img) {
+      removeControlDecoration(span);
+    }
+  }
+
   function decorateQuickSend(img, control, emoji, label) {
     // The nested image wrapper clips replacement siblings. Mount the emoji on
     // the semantic quick-send button and use the button as the layout boundary.
@@ -311,6 +323,7 @@
     const effectiveLabel = findBestImageLabel(img, labelOverride);
     const emoji = mapLabelToEmoji(effectiveLabel);
     if (!emoji) {
+      removeQuickSendDecoration(img);
       removeImageDecoration(img);
       return;
     }
@@ -321,6 +334,9 @@
       return;
     }
 
+    // The image can stop being a quick-send source. Remove its old button
+    // overlay, or the old emoji stays on top of the new decoration.
+    removeQuickSendDecoration(img);
     const span = ensureImageEmojiSpan(img);
     updateEmojiSpan(
       span,
@@ -345,7 +361,12 @@
 
     if (kind === CONTROL_KIND) {
       const source = span.vmSystemReactionSource;
-      if (source instanceof HTMLImageElement && source.isConnected) {
+      const control = span.parentElement;
+      if (
+        source instanceof HTMLImageElement &&
+        source.isConnected &&
+        control?.contains(source)
+      ) {
         decorateImageReaction(source);
       } else {
         removeControlDecoration(span);
@@ -380,16 +401,9 @@
   }
 
   const observer = new MutationObserver((mutations) => {
-    for (const mutation of mutations) {
-      if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
-        scheduleProcess();
-        return;
-      }
-      if (mutation.type === "attributes") {
-        scheduleProcess();
-        return;
-      }
-    }
+    // Removals also need a pass. Messenger can remove a reaction image and
+    // keep its parent. The replacement span then stays visible without a pass.
+    if (mutations.length > 0) scheduleProcess();
   });
 
   process(document);
